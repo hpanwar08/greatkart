@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 from category.models import Category
@@ -15,6 +16,9 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now, editable=False)
     modified_at = models.DateTimeField(auto_now=True)
+
+    def get_url(self):
+        return reverse('store:product_detail', args=[self.category.slug, self.slug])
 
     def __str__(self):
         return self.product_name
