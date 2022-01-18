@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     # custom
     'category.apps.CategoryConfig',
     'store.apps.StoreConfig',
+    'cart.apps.CartConfig',
     # third part
     'debug_toolbar'
 ]
@@ -69,7 +70,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'category.context_processors.category_processor'
+                'category.context_processors.category_processor',
+                'cart.context_processors.cart_count'
             ],
         },
     },
