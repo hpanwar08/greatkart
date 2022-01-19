@@ -3,7 +3,7 @@ from django.http import HttpRequest
 from django.shortcuts import render, redirect, get_object_or_404
 
 from cart.models import Cart, CartItem
-from store.models import Product
+from store.models import Product, Variation
 
 
 def _get_session_id(request: HttpRequest):
@@ -14,29 +14,60 @@ def _get_session_id(request: HttpRequest):
 
 
 def add_to_cart(request: HttpRequest, product_id: int):
+    cart = None
     product = Product.objects.get(id=product_id)
+    product_variation = []
 
-    try:
-        cart = Cart.objects.get(cart_id=_get_session_id(request))
-    except Cart.DoesNotExist:
-        cart = Cart.objects.create(cart_id=_get_session_id(request))
-        cart.save()
+    if request.method == 'POST':
+        for key, value in request.POST.items():
+            try:
 
-    try:
-        cart_item = CartItem.objects.get(cart_id=cart.id, product=product)
-    except CartItem.DoesNotExist:
-        cart_item = CartItem.objects.create(cart_id=cart.id, product=product, quantity=0)
+                variation = Variation.objects.get(product=product, variation_category__iexact=key,
+                                                  variation_value__iexact=value)
+                product_variation.append(variation)
+            except Variation.DoesNotExist as e:
+                print(e)
 
-    cart_item.quantity += 1
-    cart_item.save()
+        try:
+            cart = Cart.objects.get(cart_id=_get_session_id(request))
+        except Cart.DoesNotExist:
+            cart = Cart.objects.create(cart_id=_get_session_id(request))
+
+        cart_items = CartItem.objects.filter(cart=cart, product=product)
+        cart_item_exists = cart_items.exists()
+
+        cart_item = None
+        if cart_item_exists:
+            existing_variations = []
+            item_ids = []
+            for item in cart_items:
+                existing_variation = item.variations.all()
+                existing_variations.append(list(existing_variation))
+                item_ids.append(item.id)
+
+            if product_variation in existing_variations:
+                item_id = item_ids[existing_variations.index(product_variation)]
+                cart_item = CartItem.objects.get(id=item_id)
+                cart_item.quantity += 1
+                cart_item.save()
+            else:
+
+                cart_item = CartItem.objects.create(cart=cart, product=product, quantity=1)
+                cart_item.variations.add(*product_variation)
+                cart_item.save()
+
+        else:
+            cart_item = CartItem.objects.create(cart=cart, product=product, quantity=1)
+            cart_item.variations.add(*product_variation)
+            cart_item.save()
+            print(cart_item.variations.all())
 
     return redirect('cart:cart')
 
 
-def remove_from_cart(request: HttpRequest, product_id: int):
-    product = get_object_or_404(Product, id=product_id)
+def remove_from_cart(request: HttpRequest, cart_item_id: int):
     cart = get_object_or_404(Cart, cart_id=_get_session_id(request))
-    cart_item = CartItem.objects.get(cart_id=cart.id, product=product)
+    cart_item = CartItem.objects.get(id=cart_item_id, cart=cart)
 
     if cart_item.quantity > 1:
         cart_item.quantity -= 1
@@ -47,10 +78,9 @@ def remove_from_cart(request: HttpRequest, product_id: int):
     return redirect('cart:cart')
 
 
-def remove_cart_item(request: HttpRequest, product_id: int):
-    product = get_object_or_404(Product, id=product_id)
+def remove_cart_item(request: HttpRequest, cart_item_id: int):
     cart = get_object_or_404(Cart, cart_id=_get_session_id(request))
-    cart_item = get_object_or_404(CartItem, cart_id=cart.id, product=product)
+    cart_item = get_object_or_404(CartItem, id=cart_item_id, cart=cart)
 
     cart_item.delete()
 
