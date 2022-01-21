@@ -33,7 +33,7 @@ def add_to_cart(request: HttpRequest, product_id: int):
         except Cart.DoesNotExist:
             cart = Cart.objects.create(cart_id=_get_session_id(request))
 
-        cart_items = CartItem.objects.filter(cart=cart, product=product)
+        cart_items = CartItem.objects.filter(cart=cart, product=product).prefetch_related('variations')
         cart_item_exists = cart_items.exists()
 
         cart_item = None
@@ -96,7 +96,8 @@ def cart(request: HttpRequest):
 
     try:
         cart = Cart.objects.get(cart_id=_get_session_id(request))
-        cart_items = CartItem.objects.filter(cart=cart, is_active=True)
+        # reduced 30 queries to 9 with prefetch_related
+        cart_items = CartItem.objects.filter(cart=cart, is_active=True).prefetch_related('variations', 'product')
 
         for item in cart_items:
             total += (item.quantity * item.product.price)
