@@ -30,3 +30,9 @@ class RegistrationForm(forms.ModelForm):
 
         if password != password1:
             raise forms.ValidationError('Passwords do not match!')
+
+
+class LoginForm(forms.ModelForm):
+    class Meta:
+        model = Account
+        fields = ('email', 'password')

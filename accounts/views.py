@@ -1,9 +1,11 @@
+from django.contrib import auth
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest
 from django.shortcuts import render, redirect
 
 from accounts.forms import RegistrationForm
 from accounts.models import Account
-from django.contrib import messages
 
 
 def register(request: HttpRequest):
@@ -36,8 +38,23 @@ def register(request: HttpRequest):
 
 
 def login(request: HttpRequest):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+
+        user = auth.authenticate(email=email, password=password)
+        if user:
+            auth.login(request, user)
+            return redirect('store:store')
+        else:
+            messages.error(request, "Incorrect username or password")
+            return redirect('accounts:login')
+
     return render(request, 'accounts/login.html')
 
 
+@login_required
 def logout(request: HttpRequest):
-    return render(request, 'accounts/logout.html')
+    auth.logout(request)
+    messages.success(request, 'You are logged out. Login again!')
+    return redirect('accounts:login')
