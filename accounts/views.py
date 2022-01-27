@@ -66,16 +66,23 @@ def register(request: HttpRequest):
 
 
 def login(request: HttpRequest):
+    if request.user.is_authenticated:
+        return redirect('accounts:dashboard')
+
+    redirect_url = request.GET.get('next')
+
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
-        redirect_url = request.GET.get('next')
 
         user = auth.authenticate(email=email, password=password)
         if user:
             auth.login(request, user)
+            if redirect_url:
+                return redirect(redirect_url)
 
-            return redirect('store:store')
+            messages.success(request, 'You are logged in.')
+            return redirect('accounts:dashboard')
         else:
             messages.error(request, "Incorrect username or password")
             return redirect('accounts:login')
@@ -108,3 +115,80 @@ def activate(request: HttpRequest, uidb64: str, token: str):
     else:
         messages.error(request, 'Invalid verification url!')
         return redirect('accounts:register')
+
+
+@login_required
+def dashboard(request: HttpRequest):
+    return render(request, 'accounts/dashboard.html')
+
+
+def forgot_password(request: HttpRequest):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        try:
+            user = Account.objects.get(email__exact=email)
+
+            # send password reset email
+            current_site = get_current_site(request)
+            email_subject = 'Reset your password'
+            email_body = render_to_string('accounts/reset_password_email.html',
+                                          {
+                                              'user': user,
+                                              'domain': current_site,
+                                              'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                                              'token': default_token_generator.make_token(user)
+                                          })
+
+            email_message = EmailMessage(email_subject, email_body, to=[user.email])
+            email_message.send()
+            messages.success(request, 'Password reset email sent to your email.')
+            return redirect('accounts:login')
+
+        except Account.DoesNotExist as e:
+            messages.error(request, 'Account does not exist. Please check and type again')
+
+    return render(request, 'accounts/forgot_password.html')
+
+
+def reset_password_validate(request: HttpRequest, uidb64: str, token: str):
+    user = None
+    try:
+        userid = urlsafe_base64_decode(uidb64).decode()
+        user = Account._default_manager.get(pk=userid)
+        print(user)
+        # return retype password form
+    except (ValueError, TypeError, OverflowError, Account.DoesNotExist) as e:
+        logger.exception('Error')
+        user = None
+
+    if user and default_token_generator.check_token(user, token):
+        request.session['uid'] = user.id
+        return render(request, 'accounts/reset_password.html')
+
+    messages.error(request, 'Invalid password reset link.')
+    return redirect("accounts:login")
+
+
+def reset_password(request: HttpRequest):
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        password1 = request.POST.get('password1')
+
+        if password == password1:
+            uid = request.session.get('uid')
+            if uid:
+                user = Account.objects.get(pk=uid)
+                user.set_password(password)
+                user.save()
+
+                del request.session['uid']
+
+                messages.success(request, 'Password successfully changed')
+                return redirect('accounts:login')
+            else:
+                messages.error(request, 'Invalid password reset request')
+                return redirect('accounts:forgot_password')
+
+        messages.error(request, 'Passwords did not match!')
+
+    return render(request, 'accounts/reset_password.html')
