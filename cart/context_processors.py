@@ -9,7 +9,11 @@ def cart_count(request: HttpRequest):
     if 'admin' in request.path:
         return {}
 
-    cart_items = CartItem.objects.filter(cart__cart_id=_get_session_id(request))
+    if request.user.is_authenticated:
+        cart_items = CartItem.objects.filter(buyer=request.user)
+    else:
+        cart_items = CartItem.objects.filter(cart__cart_id=_get_session_id(request))
+
     for item in cart_items:
         cart_quantity_count += item.quantity
 

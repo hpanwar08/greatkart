@@ -17,6 +17,8 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from accounts.forms import RegistrationForm
 from accounts.models import Account
 from accounts.services import register_service
+from cart.models import Cart, CartItem
+from cart.views import _get_session_id
 
 logger = logging.getLogger(__file__)
 
@@ -77,7 +79,23 @@ def login(request: HttpRequest):
 
         user = auth.authenticate(email=email, password=password)
         if user:
+            # assign anonymous cart to user
+            try:
+                cart = Cart.objects.get(cart_id=_get_session_id(request))
+                cart_items = cart.cart_items.all()
+                for cart_item in cart_items:
+                    cart_item.buyer = user
+
+                if cart_items:
+                    CartItem.objects.bulk_update(cart_items, ['buyer'])
+
+                # group the existing items of the user with new items
+
+            except Cart.DoesNotExist:
+                logger.exception('Cart does not exists')
+
             auth.login(request, user)
+
             if redirect_url:
                 return redirect(redirect_url)
 
