@@ -1,5 +1,5 @@
 import logging
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from django.contrib import auth
 from django.contrib import messages
@@ -71,8 +71,6 @@ def login(request: HttpRequest):
     if request.user.is_authenticated:
         return redirect('accounts:dashboard')
 
-    redirect_url = request.GET.get('next')
-
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
@@ -81,23 +79,48 @@ def login(request: HttpRequest):
         if user:
             # assign anonymous cart to user
             try:
+                # get cart items and their variation in current session cart
                 cart = Cart.objects.get(cart_id=_get_session_id(request))
-                cart_items = cart.cart_items.all()
-                for cart_item in cart_items:
-                    cart_item.buyer = user
+                new_cart_items = cart.cart_items.all().prefetch_related('variations')
 
-                if cart_items:
-                    CartItem.objects.bulk_update(cart_items, ['buyer'])
+                new_cart_item_variations = []
+                new_cart_items_ids = []
+                for new_cart_item in new_cart_items:
+                    new_cart_item_variations.append(list(new_cart_item.variations.all()))
+                    new_cart_items_ids.append(new_cart_item)
 
-                # group the existing items of the user with new items
+                # get all the items from user's already existing cart
+                user_cart_items = CartItem.objects.filter(buyer=user).prefetch_related('variations')
+                existing_items = []
+                existing_item_ids = []
+                for user_cart_item in user_cart_items:
+                    existing_items.append(list(user_cart_item.variations.all()))
+                    existing_item_ids.append(user_cart_item)
+
+                # find if current cart item is in user's cart, if yes increment else assign user
+                for idx, item in enumerate(new_cart_item_variations):
+                    if item in existing_items:
+                        existing_id = existing_items.index(item)
+                        existing_item = existing_item_ids[existing_id]
+                        item = new_cart_items_ids[idx]
+                        existing_item.quantity += item.quantity
+                        existing_item.save()
+                    else:
+                        item = new_cart_items_ids[idx]
+                        item.buyer = user
+                        item.save()
 
             except Cart.DoesNotExist:
                 logger.exception('Cart does not exists')
 
             auth.login(request, user)
 
-            if redirect_url:
-                return redirect(redirect_url)
+            referer_url = request.META.get('HTTP_REFERER')
+            query = urlparse(referer_url).query
+            query_params = dict(q.split('=') for q in query.split('&'))
+
+            if 'next' in query_params:
+                return redirect(query_params['next'])
 
             messages.success(request, 'You are logged in.')
             return redirect('accounts:dashboard')

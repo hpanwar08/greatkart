@@ -7,7 +7,8 @@
 - [x] Remove from cart
 - [x] Search for products
 - [x] Product variations e.g. color, size
-- [ ] User login and accounts
+- [x] User login and accounts
+- [x] Transfer anonymous user cart item to account upon login
 - [ ] Check out
 - [ ] Payment system
 - [ ] Orders
@@ -17,3 +18,7 @@
 #### Development
 
 ### Technologies
+* Python 3.9
+* Django 3.2
+* Postgres
+* Bootstrap 4

@@ -34,13 +34,13 @@ def product_detail(request: HttpRequest, category_slug, product_slug):
     product = None
     try:
         product = Product.objects.get(category__slug=category_slug, slug=product_slug)
-        is_product_in_cart = CartItem.objects.filter(cart__cart_id=_get_session_id(request), product=product).exists()
+        # is_product_in_cart = CartItem.objects.filter(cart__cart_id=_get_session_id(request), product=product).exists()
     except Product.DoesNotExist as ex:
         raise ex
 
     context = {
         'product': product,
-        'is_product_in_cart': is_product_in_cart
+        # 'is_product_in_cart': is_product_in_cart
     }
 
     return render(request, 'store/product_detail.html', context)
