@@ -47,6 +47,9 @@ class Order(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        indexes = [models.Index(fields=['order_number'])]
+
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
 

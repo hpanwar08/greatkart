@@ -211,7 +211,7 @@
                               .then((data) => {
                                       console.log(data);
                                       console.log('Transaction complete')
-                                      window.location.href = redirect_url + '?order_id=' + data.orderID + '&transactionID=' + data.transactionID
+                                      window.location.href = redirect_url + '?order_number=' + data.orderID + '&transaction_number=' + data.transactionID
                                   }
                               );
                       }

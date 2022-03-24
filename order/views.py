@@ -1,7 +1,7 @@
 import datetime
 import json
-
 import logging
+
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMessage
 from django.http import HttpRequest, JsonResponse
@@ -118,7 +118,7 @@ def payment(request: HttpRequest):
 
     # notify user
     email_subject = 'Thank you for your order'
-    email_body = render_to_string('order/order_receive_email.html', {'user': request.user, 'order':order})
+    email_body = render_to_string('order/order_receive_email.html', {'user': request.user, 'order': order})
 
     email_message = EmailMessage(email_subject, email_body, to=[request.user.email])
     email_message.send()
@@ -134,5 +134,23 @@ def payment(request: HttpRequest):
 
 
 def order_complete(request: HttpRequest):
-    context  ={}
-    return render(request, 'order/order_complete.html', context)
+    order_number = request.GET.get('order_number')
+    transaction_number = request.GET.get('transaction_number')
+    try:
+        order = Order.objects.get(order_number=order_number, is_ordered=True)
+        order_items = OrderItem.objects.filter(order_id=order.id)
+        payment = Payment.objects.get(payment_id=transaction_number)
+
+        total = 0
+        for item in order_items:
+            total += item.product.price * item.quantity
+
+        context = {
+            'order': order,
+            'payment': payment,
+            'order_items': order_items,
+            'total': total
+        }
+        return render(request, 'order/order_complete.html', context)
+    except (Order.DoesNotExist, Payment.DoesNotExist):
+        return redirect('store:store')

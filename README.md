@@ -9,13 +9,16 @@
 - [x] Product variations e.g. color, size
 - [x] User login and accounts
 - [x] Transfer anonymous user cart item to account upon login
-- [ ] Check out
-- [ ] Payment system
+- [x] Check out
+- [x] Payment system using PayPal
 - [ ] Orders
 
 
 ### Installation
 #### Development
+
+### Screenshots
+
 
 ### Technologies
 * Python 3.9
