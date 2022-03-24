@@ -1,3 +1,4 @@
+import logging
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpRequest
@@ -7,6 +8,8 @@ from cart.models import CartItem
 from cart.views import _get_session_id
 from category.models import Category
 from store.models import Product
+
+logger = logging.getLogger(__file__)
 
 
 def store(request: HttpRequest, category_slug: str = None):

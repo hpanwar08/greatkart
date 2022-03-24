@@ -47,8 +47,14 @@ class Order(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+    def get_full_address(self):
+        return f"{self.address_line_1} {self.address_line_2}"
+
     def __str__(self):
-        return f"Order:{self.id}-{self.user.first_name}"
+        return f"{self.order_number}"
 
 
 class OrderItem(models.Model):
@@ -56,9 +62,7 @@ class OrderItem(models.Model):
     payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, blank=True, null=True)
     user = models.ForeignKey(Account, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    variation = models.ForeignKey(Variation, on_delete=models.CASCADE)
-    color = models.CharField(max_length=50)
-    size = models.CharField(max_length=50)
+    variation = models.ManyToManyField(Variation, blank=True)
     quantity = models.IntegerField()
     product_price = models.FloatField()
     ordered = models.BooleanField(default=False)
