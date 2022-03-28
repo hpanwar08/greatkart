@@ -12,6 +12,7 @@
 - [x] Check out
 - [x] Payment system using PayPal
 - [ ] Orders
+- [ ] Review and rating system
 
 
 ### Installation
