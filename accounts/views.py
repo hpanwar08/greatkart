@@ -117,7 +117,8 @@ def login(request: HttpRequest):
 
             referer_url = request.META.get('HTTP_REFERER')
             query = urlparse(referer_url).query
-            query_params = dict(q.split('=') for q in query.split('&'))
+            logger.info(f"Query {query} {referer_url}")
+            query_params = dict(q.split('=') for q in query.split('&') if q)
 
             if 'next' in query_params:
                 return redirect(query_params['next'])

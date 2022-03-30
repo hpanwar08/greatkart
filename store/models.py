@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Avg, Count
 from django.urls import reverse
 from django.utils import timezone
 
@@ -20,6 +21,20 @@ class Product(models.Model):
 
     def get_url(self):
         return reverse('store:product_detail', args=[self.category.slug, self.slug])
+
+    def average_rating(self):
+        reviews = ReviewRating.objects.filter(product=self, status=True).aggregate(average=Avg('rating'))
+        average = 0
+        if reviews['average']:
+            average = float(reviews['average'])
+        return average
+
+    def total_rating(self):
+        reviews = ReviewRating.objects.filter(product=self, status=True).aggregate(count=Count('rating'))
+        count = 0
+        if reviews['count']:
+            count = int(reviews['count'])
+        return count
 
     def __str__(self):
         return self.product_name

@@ -1,13 +1,16 @@
 import logging
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpRequest
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
-from cart.models import CartItem
-from cart.views import _get_session_id
 from category.models import Category
-from store.models import Product
+from order.models import OrderItem
+from store.forms import ReviewRatingForm
+from store.models import Product, ReviewRating
 
 logger = logging.getLogger(__file__)
 
@@ -41,9 +44,20 @@ def product_detail(request: HttpRequest, category_slug, product_slug):
     except Product.DoesNotExist as ex:
         raise ex
 
+    order_item = None
+    if request.user.is_authenticated:
+        try:
+            order_item = OrderItem.objects.filter(user=request.user, product=product).exists()
+        except OrderItem.DoesNotExist as ex:
+            logger.exception(ex)
+
+    reviews = ReviewRating.objects.filter(product=product, status=True)
+
     context = {
         'product': product,
-        # 'is_product_in_cart': is_product_in_cart
+        # 'is_product_in_cart': is_product_in_cart,
+        'order_item': order_item,
+        'reviews': reviews
     }
 
     return render(request, 'store/product_detail.html', context)
@@ -59,3 +73,29 @@ def search_products(request: HttpRequest):
         'product_count': product_count
     }
     return render(request, 'store/store.html', context)
+
+
+@login_required
+def submit_review(request: HttpRequest, product_id: int):
+    url = request.META.get('HTTP_REFERER')
+    if request.method == 'POST':
+        try:
+            review = ReviewRating.objects.get(user__id=request.user.id, product__id=product_id)
+            form = ReviewRatingForm(request.POST, instance=review)
+            form.save()
+            messages.success(request, "Thank you for your review")
+            return redirect(url)
+        except ReviewRating.DoesNotExist:
+            logger.warning('Review does not exists')
+            form = ReviewRatingForm(request.POST)
+            if form.is_valid():
+                data = ReviewRating()
+                data.subject = form.cleaned_data['subject']
+                data.review = form.cleaned_data['review']
+                data.rating = form.cleaned_data['rating']
+                data.ip = request.META.get('REMOTE_ADDR')
+                data.user = request.user
+                data.product_id = product_id
+                data.save()
+                messages.success(request, "Thank you for your review")
+                return redirect(url)
