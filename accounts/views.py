@@ -19,6 +19,7 @@ from accounts.models import Account
 from accounts.services import register_service
 from cart.models import Cart, CartItem
 from cart.views import _get_session_id
+from order.models import Order
 
 logger = logging.getLogger(__file__)
 
@@ -161,7 +162,12 @@ def activate(request: HttpRequest, uidb64: str, token: str):
 
 @login_required
 def dashboard(request: HttpRequest):
-    return render(request, 'accounts/dashboard.html')
+    orders = Order.objects.filter(user=request.user, is_ordered=True).order_by('-created_at')
+    orders_count = orders.count()
+    context = {
+        'orders_count': orders_count
+    }
+    return render(request, 'accounts/dashboard.html', context)
 
 
 def forgot_password(request: HttpRequest):
@@ -234,3 +240,11 @@ def reset_password(request: HttpRequest):
         messages.error(request, 'Passwords did not match!')
 
     return render(request, 'accounts/reset_password.html')
+
+
+def my_orders(request: HttpRequest):
+    orders = Order.objects.filter(user=request.user, is_ordered=True).order_by('-created_at')
+    context = {
+        'orders': orders
+    }
+    return render(request, 'accounts/my_orders.html', context)
