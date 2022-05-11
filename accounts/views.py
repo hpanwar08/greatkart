@@ -8,18 +8,19 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
 from django.http import HttpRequest
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
 from accounts.forms import RegistrationForm
-from accounts.models import Account
+from accounts.models import Account, UserProfile
 from accounts.services import register_service
 from cart.models import Cart, CartItem
 from cart.views import _get_session_id
 from order.models import Order
+from accounts.forms import UserForm, UserProfileForm
 
 logger = logging.getLogger(__file__)
 
@@ -248,3 +249,25 @@ def my_orders(request: HttpRequest):
         'orders': orders
     }
     return render(request, 'accounts/my_orders.html', context)
+
+
+def edit_profile(request: HttpRequest):
+    userprofile = get_object_or_404(UserProfile, user=request.user)
+    if request.method == 'POST':
+        user_form = UserForm(request.POST, instance=request.user)
+        profile_form = UserProfileForm(request.POST, request.FILES, instance=userprofile)
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Your profile has been updated.')
+            return redirect('edit_profile')
+    else:
+        user_form = UserForm(instance=request.user)
+        profile_form = UserProfileForm(instance=userprofile)
+    context = {
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'userprofile': userprofile,
+    }
+
+    return render(request, 'accounts/edit_profile.html', context)
