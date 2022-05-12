@@ -19,7 +19,7 @@ from accounts.models import Account, UserProfile
 from accounts.services import register_service
 from cart.models import Cart, CartItem
 from cart.views import _get_session_id
-from order.models import Order
+from order.models import Order, OrderItem
 from accounts.forms import UserForm, UserProfileForm
 
 logger = logging.getLogger(__file__)
@@ -310,7 +310,7 @@ def change_password(request):
 
 @login_required
 def order_detail(request, order_id):
-    order_detail = Order.objects.filter(order__order_number=order_id)
+    order_detail = OrderItem.objects.filter(order__order_number=order_id)
     order = Order.objects.get(order_number=order_id)
     subtotal = 0
     for i in order_detail:
